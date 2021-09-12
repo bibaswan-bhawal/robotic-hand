@@ -1,0 +1,169 @@
+/*
+  Control Script for Robotic Hand
+  Designed by: Bibaswan Bhawal
+  Version: 1.0
+
+  Script to calibrate and control the five fingers of arduino based
+  robotic hand.
+*/
+
+// Steps required to fully acctuate
+const int STEPS_THUMB = 2400;
+const int STEPS_INDEX = 0;
+const int STEPS_MIDDLE = 0;
+const int STEPS_RING = 0;
+const int STEPS_PINKY = 0;
+
+// Struct to hold pins for each finger
+typedef struct {
+  const int dirPin;
+  const int stepPin;
+} Finger;
+
+// Pin assignments
+const Finger thumb = {3, 4};   // Thumb dir: 3, step: 4
+const Finger index = {5, 6};   // Index dir: 5, step: 6
+const Finger middle = {7, 8};  // Middle dir: 7, step: 8
+const Finger ring = {9, 10};   // Ring dir: 9, step: 10
+const Finger pinky = {11, 12}; // pinky dir: 11, step: 12
+
+const int endstopPin = 2; // Endstop Pin number
+const int calibrationMovementSpeed = 2000; // Movement speed during calibration
+const int movementSpeed = 500; // Normal movement speed
+
+//Rotation constants
+const int clockwise = HIGH; // Clockwise rotation dirPin high
+const int antiClockwise = LOW; // anti-clockwise rotation dirPin low
+
+// Endstop activated tracker
+bool maxMovement = false;
+
+/******************************************************************
+ *  Function:              setup
+ *  
+ *  Description:          Setup function that sets up all pin
+ *                        initializations, interupts, and 
+ *                        calibrates the hand.    
+ *                                    
+ *****************************************************************/
+void setup() {
+  // Initialize the endstop as input and pull up pin
+  pinMode(endstopPin, INPUT_PULLUP);
+  
+  // pin initialization of fingers
+  FingerPinInitialization(thumb);
+  
+  Serial.begin(9600); // Begin serial port to be able to output to screen
+  
+  // Initialize built in LED
+  pinMode(LED_BUILTIN, OUTPUT);
+
+  // Attach an interrupt to endstop_ISR and set trigger when low
+  attachInterrupt(0, endstop_ISR, LOW);
+
+  // Calibrate hand
+  if(calibration() != 1){
+    // Error occured during Calibration
+    Serial.println("Calibration error: failed to calibrate"); 
+    while(true); // stop program
+  }
+}
+
+/******************************************************************
+ *  Function:             fingerPinInitialization
+ *  
+ *  Description:          Intializes the direction and step pin for
+ *                        given finger as outputs.
+ *  
+ *  params:
+ *    Finger finger:      finger which to initialize.                   
+ *****************************************************************/
+
+void FingerPinInitialization(Finger finger){
+  pinMode(finger.stepPin, OUTPUT); // set stepPin as outout
+  pinMode(finger.dirPin, OUTPUT);  // set dirPin as output
+}
+
+/******************************************************************
+ *  Function:             loop
+ *  
+ *  Description:          Main loop empty
+ *                        
+ *****************************************************************/
+void loop() {calibration();}
+
+/******************************************************************
+ *  Function:             calibration
+ *  
+ *  Description:          Calibrates each finger one by one
+ * 
+ *  Return:               returns calibration completion code
+ *                        1 - success
+ *                        0 - failure
+ *****************************************************************/
+int calibration(){
+  calibrationThumb();
+
+  return 1;
+}
+
+/******************************************************************
+ *  Function:             calibrationThumb
+ *  
+ *  Description:          calibrates the thumb by continuously
+ *                        retracting the thumb until endstop interupt
+ *                        is triggered. Then the thumb is expanded
+ *                        completely 
+ *                        
+ *****************************************************************/
+void calibrationThumb(){
+  maxMovement = false; // reset endstop trigger
+
+  interrupts();
+  // Keep retracting finger until endstop interupt triggered
+  while(maxMovement == false){
+    movefinger(thumb, calibrationMovementSpeed, clockwise);
+  }
+  
+  // Extend finger to max extension
+  for(int i = 0; i < STEPS_THUMB; i++){
+    movefinger(thumb, movementSpeed, antiClockwise);
+  }
+}
+
+/******************************************************************
+ *  Function:             moveFinger
+ *                        
+ *  Description:          Moves stepper motor by one step in given
+ *                        direction.
+ *  
+ *  Params:
+ *    Finger finger:      reference to a finger of type Finger
+ *    int speed:          speed at which to turn motor
+ *    int direction:      direction in which to turn motor
+ * 
+ *****************************************************************/
+void movefinger(Finger finger, int speed, int direction){
+
+  // Set rotation direction
+  digitalWrite(finger.dirPin, direction);
+
+  // rotate motor by one step
+  digitalWrite(finger.stepPin, HIGH);
+  delayMicroseconds(speed);
+  digitalWrite(finger.stepPin, LOW);
+  delayMicroseconds(speed);
+}
+
+/******************************************************************
+ *  Function:             endstop_ISR
+ *                        
+ *  Description:          Function gets called when interrupt triggered
+ *                        and sets maxMovement to true to indicate
+ *                        finger is at max retraction.
+ * 
+ *****************************************************************/
+void endstop_ISR() {
+  maxMovement = true;
+  noInterrupts();
+}

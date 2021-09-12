@@ -1,0 +1,7 @@
+{
+    "sketch": "Robotic_Hand.ino",
+    "board": "arduino:avr:nano",
+    "configuration": "cpu=atmega328old",
+    "programmer": "AVRISP mkII",
+    "port": "COM4"
+}

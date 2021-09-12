@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "arduino.h": "c",
+        "main.h": "c",
+        "calibration.h": "c",
+        "move_finger.h": "c"
+    }
+}
